@@ -9,7 +9,12 @@ import (
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
+	"github.com/kalai-senthil/go-web-server/internal/database"
 )
+
+type DbApi struct {
+	queries *database.Queries
+}
 
 func main() {
 	godotenv.Load()
@@ -18,6 +23,15 @@ func main() {
 		log.Fatal("Specify port")
 		return
 	}
+	dbConnection, err := connectToDB()
+	if err != nil {
+		log.Fatal("Not able to connect to database")
+	}
+	queries := database.New(dbConnection)
+	db := DbApi{
+		queries: queries,
+	}
+	dbConnection.Exec("SELECT * FROM users")
 	router := chi.NewRouter()
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
@@ -30,6 +44,7 @@ func main() {
 	router.Get("/", func(w http.ResponseWriter, r *http.Request) {
 		respondWithJSON(w, 200, struct{}{})
 	})
+	router.Post("/users", db.createUserHandler)
 	server := &http.Server{
 		Handler: router,
 		Addr:    fmt.Sprintf(": %s", PORT),
