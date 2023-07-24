@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
@@ -31,7 +32,7 @@ func main() {
 	db := DbApi{
 		queries: queries,
 	}
-	dbConnection.Exec("SELECT * FROM users")
+	go startScaraping(queries, 10, time.Minute)
 	router := chi.NewRouter()
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"https://*", "http://*"},
@@ -45,6 +46,13 @@ func main() {
 		respondWithJSON(w, 200, struct{}{})
 	})
 	router.Post("/users", db.createUserHandler)
+	router.Get("/feeds", db.getFeedsHandler)
+	router.Post("/feeds", db.createFeedHandler)
+	router.Post("/user", db.getUserHandler)
+	router.Post("/feed/follow", db.feedFollowHandler)
+	router.Delete("/feed/unfollow/{feedFollowId}", db.feedUnFollowHandler)
+	router.Get("/feeds/follow", db.feedFollowHandler)
+	router.Get("/posts", db.getPostsForUserHadler)
 	server := &http.Server{
 		Handler: router,
 		Addr:    fmt.Sprintf(": %s", PORT),
